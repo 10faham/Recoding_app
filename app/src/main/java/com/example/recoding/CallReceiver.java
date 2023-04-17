@@ -49,7 +49,7 @@ public class CallReceiver extends BroadcastReceiver {
     private void startRecording(Context context) {
         try {
             recorder = new MediaRecorder();
-            recorder.setAudioSource(MediaRecorder.AudioSource.VOICE_CALL);
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             filePath = getFilePath(context);
@@ -64,7 +64,6 @@ public class CallReceiver extends BroadcastReceiver {
             recorder.start();
             isRecording = true;
             Log.d("CallRecorder", "Recording started");
-
         } catch (IllegalStateException | IOException e) {
             Log.e("CallRecorder", "Failed to start recording: " + e.getMessage());
         }
