@@ -1,4 +1,5 @@
 package com.example.recoding;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -16,12 +17,16 @@ import androidx.core.content.ContextCompat;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public class CallReceiver extends BroadcastReceiver {
+    private static final int REQUEST_PERMISSION_CODE = 101;
+    private static final String[] PERMISSIONS = {Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE};
     private static MediaRecorder recorder;
     private static boolean isRecording = false;
-    private static final int REQUEST_PERMISSION_CODE = 101;
+    private static String filePath;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -29,10 +34,10 @@ public class CallReceiver extends BroadcastReceiver {
             String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
             if (state.equals(TelephonyManager.EXTRA_STATE_OFFHOOK)) {
                 // Phone call started, start recording
-                if (checkPermission(context)) {
-                    startRecording();
+                if (checkPermissions(context)) {
+                    startRecording(context);
                 } else {
-                    requestPermission(context);
+                    requestPermissions(context);
                 }
             } else if (state.equals(TelephonyManager.EXTRA_STATE_IDLE)) {
                 // Phone call ended, stop recording
@@ -41,13 +46,20 @@ public class CallReceiver extends BroadcastReceiver {
         }
     }
 
-    private void startRecording() {
+    private void startRecording(Context context) {
         try {
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.VOICE_CALL);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            recorder.setOutputFile(getFilePath());
+            filePath = getFilePath(context);
+            File file = new File(filePath);
+            if (!file.getParentFile().exists()) {
+                if (!file.getParentFile().mkdirs()) {
+                    Log.e("CallRecorder", "Failed to create directory");
+                }
+            }
+            recorder.setOutputFile(filePath);
             recorder.prepare();
             recorder.start();
             isRecording = true;
@@ -65,34 +77,52 @@ public class CallReceiver extends BroadcastReceiver {
                 recorder.release();
                 isRecording = false;
                 Log.d("CallRecorder", "Recording stopped");
-
             } catch (IllegalStateException e) {
                 Log.e("CallRecorder", "Failed to stop recording: " + e.getMessage());
             }
         }
     }
 
-    private String getFilePath() {
-        File folder = new File(Environment.getExternalStorageDirectory() + "/CallRecorder");
-        if (!folder.exists()) {
-            if (!folder.mkdirs()) {
+    private String getFilePath(Context context) {
+        String directoryName = "CallRecorder";
+        String fileName = "REC_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date()) + ".mp4";
+
+        // Check if the external storage is mounted and writable
+        String state = Environment.getExternalStorageState();
+        if (!Environment.MEDIA_MOUNTED.equals(state) && !Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            Log.e("CallRecorder", "External storage is not mounted or is read-only");
+            return null;
+        }
+
+        // Create the directory if it does not exist
+        File directory = new File(context.getExternalFilesDir(null), directoryName);
+        if (!directory.exists()) {
+            if (!directory.mkdirs()) {
                 Log.e("CallRecorder", "Failed to create directory");
+                return null;
             }
         }
-        String filePath = folder.getAbsolutePath() + "/" + new Date().getTime() + ".mp4";
+
+        // Create the file path
+        File file = new File(directory, fileName);
+        String filePath = file.getAbsolutePath();
         Log.d("CallRecorder", "Output file path: " + filePath);
+
         return filePath;
     }
 
-    private boolean checkPermission(Context context) {
-        int recordAudioPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO);
-        int writeExternalStoragePermission = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        return recordAudioPermission == PackageManager.PERMISSION_GRANTED && writeExternalStoragePermission == PackageManager.PERMISSION_GRANTED;
+    private boolean checkPermissions(Context context) {
+        for (String permission : PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    private void requestPermission(Context context) {
+    private void requestPermissions(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION_CODE);
+            ActivityCompat.requestPermissions((Activity) context, PERMISSIONS, REQUEST_PERMISSION_CODE);
         }
     }
 }
