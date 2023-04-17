@@ -84,7 +84,7 @@ public class CallReceiver extends BroadcastReceiver {
 
     private String getFilePath(Context context) {
         String directoryName = "CallRecorder";
-        String fileName = "REC_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date()) + ".mp4";
+        String fileName = "REC_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date()) + ".mp3";
 
         // Check if the external storage is mounted and writable
         String state = Environment.getExternalStorageState();
