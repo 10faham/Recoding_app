@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.calls_recoding'
+    namespace 'com.example.recoding'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.calls_recoding"
+        applicationId "com.example.recoding"
         minSdk 24
         targetSdk 33
         versionCode 1
